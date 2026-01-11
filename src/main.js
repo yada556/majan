@@ -56,6 +56,16 @@ class TilePreviewScene extends Phaser.Scene {
     constructor() {
         super();
         this.selectedTileIds = new Set();
+        this.selectedTileList = [];
+        this.selectedSprites = new Map();
+        this.tileImages = new Map();
+        this.resultText = null;
+        this.taskText = null;
+        this.selectionArea = null;
+        this.tileScale = 1;
+        this.tileWidth = 0;
+        this.tileHeight = 0;
+        this.liftOffset = 12;
     }
 
     preload() {
@@ -74,7 +84,72 @@ class TilePreviewScene extends Phaser.Scene {
         const tileScale = Math.min(0.7, availableWidth / (sampleImage.width * 9));
         const tileWidth = sampleImage.width * tileScale;
         const tileHeight = sampleImage.height * tileScale;
-        const liftOffset = 12;
+        const headerY = 10;
+        const selectionArea = {
+            x: 20,
+            y: 420,
+            width: 760,
+            height: 160
+        };
+
+        this.selectionArea = selectionArea;
+        this.tileScale = tileScale;
+        this.tileWidth = tileWidth;
+        this.tileHeight = tileHeight;
+
+        this.taskText = this.add.text(20, headerY, 'お題：タンヤオ（1・9・字牌なし）', {
+            fontSize: '18px',
+            color: '#222'
+        });
+
+        const judgeButton = this.add.text(600, headerY, '判定', {
+            fontSize: '18px',
+            color: '#2c3e50'
+        });
+        judgeButton.setInteractive({ useHandCursor: true });
+        judgeButton.on('pointerdown', () => {
+            const tileKeys = this.selectedTileList.map((tileId) => this.getTileKey(tileId));
+            if (tileKeys.length === 0) {
+                this.setResultMessage('牌を選択してください', '#c0392b');
+                return;
+            }
+            const result = evaluateTanyao(tileKeys);
+            if (result.ok) {
+                this.setResultMessage('正解！', '#2e7d32');
+                this.clearAllSelection();
+            } else {
+                this.setResultMessage(`不正解：${result.reason}`, '#c0392b');
+            }
+        });
+
+        this.resultText = this.add.text(20, headerY + 24, '', {
+            fontSize: '16px',
+            color: '#333'
+        });
+
+        const selectionFrame = this.add.graphics();
+        selectionFrame.lineStyle(2, 0x666666, 1);
+        selectionFrame.strokeRect(
+            selectionArea.x,
+            selectionArea.y,
+            selectionArea.width,
+            selectionArea.height
+        );
+        this.add.text(selectionArea.x + 10, selectionArea.y + 8, '選択中', {
+            fontSize: '16px',
+            color: '#333'
+        });
+
+        const clearButton = this.add.text(
+            selectionArea.x + selectionArea.width - 80,
+            selectionArea.y + 8,
+            '全解除',
+            { fontSize: '16px', color: '#c0392b' }
+        );
+        clearButton.setInteractive({ useHandCursor: true });
+        clearButton.on('pointerdown', () => {
+            this.clearAllSelection();
+        });
 
         TILE_ROWS.forEach((row, rowIndex) => {
             const y = marginY + rowIndex * (tileHeight + rowGap);
@@ -89,27 +164,108 @@ class TilePreviewScene extends Phaser.Scene {
                 image.setData('tileId', tileId);
                 image.setData('baseY', y);
                 image.setData('isSelected', false);
+                this.tileImages.set(tileId, image);
 
                 image.on('pointerdown', () => {
-                    const isSelected = image.getData('isSelected');
-                    const nextSelected = !isSelected;
-                    image.setData('isSelected', nextSelected);
-
-                    if (nextSelected) {
-                        this.selectedTileIds.add(tileId);
-                        image.setY(y - liftOffset);
-                        image.setAlpha(0.85);
+                    if (image.getData('isSelected')) {
+                        this.deselectTile(tileId);
                     } else {
-                        this.selectedTileIds.delete(tileId);
-                        image.setY(y);
-                        image.setAlpha(1);
+                        this.selectTile(tileId, key);
                     }
-
-                    console.log(Array.from(this.selectedTileIds));
+                    this.layoutSelectedTiles(selectionArea, tileScale, tileWidth, tileHeight);
+                    this.logSelection();
                 });
             });
         });
     }
+
+    selectTile(tileId, key) {
+        const image = this.tileImages.get(tileId);
+        if (!image || this.selectedTileIds.has(tileId)) {
+            return;
+        }
+        image.setData('isSelected', true);
+        image.setY(image.getData('baseY') - this.liftOffset);
+        image.setAlpha(0.85);
+        this.selectedTileIds.add(tileId);
+        this.selectedTileList.push(tileId);
+
+        const copy = this.add.image(0, 0, key);
+        this.selectedSprites.set(tileId, copy);
+    }
+
+    deselectTile(tileId) {
+        const image = this.tileImages.get(tileId);
+        if (image) {
+            image.setData('isSelected', false);
+            image.setY(image.getData('baseY'));
+            image.setAlpha(1);
+        }
+
+        const sprite = this.selectedSprites.get(tileId);
+        if (sprite) {
+            sprite.destroy();
+            this.selectedSprites.delete(tileId);
+        }
+
+        this.selectedTileIds.delete(tileId);
+        this.selectedTileList = this.selectedTileList.filter((id) => id !== tileId);
+    }
+
+    layoutSelectedTiles(selectionArea, tileScale, tileWidth, tileHeight) {
+        const startX = selectionArea.x + 20 + tileWidth / 2;
+        const centerY = selectionArea.y + selectionArea.height / 2 + tileHeight * 0.1;
+
+        this.selectedTileList.forEach((tileId, index) => {
+            const sprite = this.selectedSprites.get(tileId);
+            if (!sprite) {
+                return;
+            }
+            sprite.setScale(tileScale);
+            sprite.setPosition(startX + index * tileWidth, centerY);
+        });
+    }
+
+    logSelection() {
+        console.log(Array.from(this.selectedTileIds));
+        console.log([...this.selectedTileList]);
+    }
+
+    clearAllSelection() {
+        this.selectedTileList.slice().forEach((tileId) => {
+            this.deselectTile(tileId);
+        });
+        this.layoutSelectedTiles(this.selectionArea, this.tileScale, this.tileWidth, this.tileHeight);
+        this.logSelection();
+    }
+
+    getTileKey(tileId) {
+        return tileId.split('#')[0];
+    }
+
+    setResultMessage(message, color) {
+        if (!this.resultText) {
+            return;
+        }
+        this.resultText.setText(message);
+        this.resultText.setColor(color);
+    }
+}
+
+function evaluateTanyao(tileKeys) {
+    for (const key of tileKeys) {
+        if (key.startsWith('ji_')) {
+            return { ok: false, reason: '字牌が含まれています' };
+        }
+        const number = Number(key.slice(2));
+        if (Number.isNaN(number)) {
+            return { ok: false, reason: '不明な牌が含まれています' };
+        }
+        if (number === 1 || number === 9) {
+            return { ok: false, reason: '1または9の数牌が含まれています' };
+        }
+    }
+    return { ok: true };
 }
 
 const config = {
