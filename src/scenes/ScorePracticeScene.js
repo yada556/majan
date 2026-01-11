@@ -221,7 +221,7 @@ export default class ScorePracticeScene extends Phaser.Scene {
         const gapX = 220;
         const gapY = 60;
 
-        this.optionButtons.forEach((button) => button.container.destroy());
+        this.optionButtons.forEach((option) => option.ui.destroy());
         this.optionButtons = [];
 
         optionList.forEach((value, index) => {
@@ -229,7 +229,7 @@ export default class ScorePracticeScene extends Phaser.Scene {
             const row = Math.floor(index / 2);
             const x = panelCenterX + (col === 0 ? -gapX / 2 : gapX / 2);
             const y = panelCenterY + (row === 0 ? -gapY / 2 : gapY / 2);
-            const button = createTextButton(
+            const ui = createTextButton(
                 this,
                 x,
                 y,
@@ -237,12 +237,12 @@ export default class ScorePracticeScene extends Phaser.Scene {
                 THEME,
                 () => {
                     this.answerValue = value;
-                    this.optionButtons.forEach((opt) => opt.setSelected(opt.value === value));
+                    this.optionButtons.forEach((opt) => opt.ui.setSelected(opt.value === value));
                     this.handleJudge();
                 },
                 { minWidth: 200 }
             );
-            this.optionButtons.push({ value, setSelected: button.setSelected, container: button.container });
+            this.optionButtons.push({ value, ui });
         });
     }
 

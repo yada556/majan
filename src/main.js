@@ -1,3 +1,4 @@
+import './styles/global.css';
 import Phaser from 'phaser';
 import MainMenuScene from './scenes/MainMenuScene.js';
 import ScorePracticeScene from './scenes/ScorePracticeScene.js';
