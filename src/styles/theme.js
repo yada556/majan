@@ -8,7 +8,13 @@ const THEME = {
     border: '#d1d5db',
     inputBg: '#ffffff',
     success: '#2e7d32',
-    error: '#c0392b'
+    error: '#c0392b',
+    buttonBg: '#e2e8f0',
+    buttonText: '#111827',
+    buttonBgHover: '#dbeafe',
+    buttonBgPressed: '#cbd5f5',
+    buttonBgSelected: '#93c5fd',
+    buttonTextSelected: '#0f172a'
 };
 
 export default THEME;

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import THEME from '../styles/theme.js';
+import createTextButton from '../ui/createTextButton.js';
 
 const FU_VALUES = [20, 30, 40, 50, 60, 70];
 
@@ -78,6 +79,7 @@ export default class ScorePracticeScene extends Phaser.Scene {
         this.resultText = null;
         this.optionButtons = [];
         this.answerValue = null;
+        this.answerPanel = null;
     }
 
     create() {
@@ -86,66 +88,88 @@ export default class ScorePracticeScene extends Phaser.Scene {
 
         this.add.text(centerX, 60, '点数計算練習', {
             fontSize: '28px',
-            color: THEME.textStrong
+            color: THEME.textStrong,
+            padding: { top: 2, bottom: 2 }
         }).setOrigin(0.5, 0.5);
 
         this.question = buildQuestion();
         this.questionText = this.add.text(centerX, 130, formatQuestion(this.question), {
             fontSize: '20px',
-            color: THEME.text
+            color: THEME.text,
+            padding: { top: 2, bottom: 2 }
         }).setOrigin(0.5, 0.5);
 
         this.add.text(centerX, 200, '4択から正しい点数を選んでください', {
             fontSize: '14px',
-            color: THEME.textMuted
+            color: THEME.textMuted,
+            padding: { top: 2, bottom: 2 }
         }).setOrigin(0.5, 0.5);
 
+        this.answerPanel = { x: 120, y: 185, width: 560, height: 220 };
         const answerPanel = this.add.graphics();
         answerPanel.fillStyle(0xffffff, 1);
-        answerPanel.fillRoundedRect(120, 185, 560, 220, 8);
+        answerPanel.fillRoundedRect(
+            this.answerPanel.x,
+            this.answerPanel.y,
+            this.answerPanel.width,
+            this.answerPanel.height,
+            8
+        );
         answerPanel.lineStyle(
             1,
             Phaser.Display.Color.HexStringToColor(THEME.border).color,
             1
         );
-        answerPanel.strokeRoundedRect(120, 185, 560, 220, 8);
+        answerPanel.strokeRoundedRect(
+            this.answerPanel.x,
+            this.answerPanel.y,
+            this.answerPanel.width,
+            this.answerPanel.height,
+            8
+        );
 
         this.add.text(140, 200, '回答（4択）', {
             fontSize: '14px',
-            color: THEME.textMuted
+            color: THEME.textMuted,
+            padding: { top: 2, bottom: 2 }
         });
 
         this.add.text(centerX, 225, '正しい点数を選んでください', {
             fontSize: '16px',
-            color: THEME.textStrong
+            color: THEME.textStrong,
+            padding: { top: 2, bottom: 2 }
         }).setOrigin(0.5, 0.5);
 
-        const nextButton = this.add.text(centerX - 60, 440, '次の問題', {
-            fontSize: '18px',
-            color: THEME.accent
-        }).setOrigin(0.5, 0.5);
-        nextButton.setInteractive({ useHandCursor: true });
-        nextButton.on('pointerover', () => nextButton.setColor(THEME.accentHover));
-        nextButton.on('pointerout', () => nextButton.setColor(THEME.accent));
-        nextButton.on('pointerdown', () => this.resetQuestion());
+        createTextButton(
+            this,
+            centerX - 110,
+            440,
+            '次の問題',
+            THEME,
+            () => this.resetQuestion(),
+            { minWidth: 140 }
+        );
 
-        const backButton = this.add.text(centerX + 80, 440, 'メニューへ戻る', {
-            fontSize: '18px',
-            color: THEME.accent
-        }).setOrigin(0.5, 0.5);
-        backButton.setInteractive({ useHandCursor: true });
-        backButton.on('pointerover', () => backButton.setColor(THEME.accentHover));
-        backButton.on('pointerout', () => backButton.setColor(THEME.accent));
-        backButton.on('pointerdown', () => this.scene.start('MainMenuScene'));
+        createTextButton(
+            this,
+            centerX + 110,
+            440,
+            'メニューへ戻る',
+            THEME,
+            () => this.scene.start('MainMenuScene'),
+            { minWidth: 180 }
+        );
 
         this.add.text(centerX - 220, 480, '判定結果', {
             fontSize: '14px',
-            color: THEME.textMuted
+            color: THEME.textMuted,
+            padding: { top: 2, bottom: 2 }
         });
 
         this.resultText = this.add.text(centerX, 510, '', {
             fontSize: '18px',
-            color: THEME.text
+            color: THEME.text,
+            padding: { top: 2, bottom: 2 }
         }).setOrigin(0.5, 0.5);
 
         this.buildOptions();
@@ -191,34 +215,34 @@ export default class ScorePracticeScene extends Phaser.Scene {
         }
 
         const optionList = Phaser.Utils.Array.Shuffle(Array.from(options));
-        const startX = 200;
-        const startY = 260;
-        const gapX = 200;
-        const gapY = 50;
+        const panel = this.answerPanel ?? { x: 120, y: 185, width: 560, height: 220 };
+        const panelCenterX = panel.x + panel.width / 2;
+        const panelCenterY = panel.y + panel.height / 2 + 8;
+        const gapX = 220;
+        const gapY = 60;
 
-        this.optionButtons.forEach((button) => button.destroy());
+        this.optionButtons.forEach((button) => button.container.destroy());
         this.optionButtons = [];
 
         optionList.forEach((value, index) => {
-            const x = startX + (index % 2) * gapX;
-            const y = startY + Math.floor(index / 2) * gapY;
-            const button = this.add.text(x, y, value, {
-                fontSize: '18px',
-                color: THEME.accent,
-                padding: { x: 8, y: 4 }
-            });
-            button.setInteractive({ useHandCursor: true });
-            button.on('pointerover', () => button.setColor(THEME.accentHover));
-            button.on('pointerout', () => {
-                button.setColor(value === this.answerValue ? THEME.textStrong : THEME.accent);
-            });
-            button.on('pointerdown', () => {
-                this.answerValue = value;
-                this.optionButtons.forEach((opt) => opt.setColor(THEME.accent));
-                button.setColor(THEME.textStrong);
-                this.handleJudge();
-            });
-            this.optionButtons.push(button);
+            const col = index % 2;
+            const row = Math.floor(index / 2);
+            const x = panelCenterX + (col === 0 ? -gapX / 2 : gapX / 2);
+            const y = panelCenterY + (row === 0 ? -gapY / 2 : gapY / 2);
+            const button = createTextButton(
+                this,
+                x,
+                y,
+                value,
+                THEME,
+                () => {
+                    this.answerValue = value;
+                    this.optionButtons.forEach((opt) => opt.setSelected(opt.value === value));
+                    this.handleJudge();
+                },
+                { minWidth: 200 }
+            );
+            this.optionButtons.push({ value, setSelected: button.setSelected, container: button.container });
         });
     }
 

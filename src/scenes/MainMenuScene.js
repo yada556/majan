@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import THEME from '../styles/theme.js';
+import createTextButton from '../ui/createTextButton.js';
 
 export default class MainMenuScene extends Phaser.Scene {
     constructor() {
@@ -12,27 +13,26 @@ export default class MainMenuScene extends Phaser.Scene {
 
         this.add.text(centerX, 120, '麻雀トレーニング', {
             fontSize: '32px',
-            color: THEME.textStrong
+            color: THEME.textStrong,
+            padding: { top: 2, bottom: 2 }
         }).setOrigin(0.5, 0.5);
 
-        const activeColor = THEME.accent;
-        const hoverColor = THEME.accentHover;
         const disabledColor = THEME.textMuted;
 
-        const scorePractice = this.add.text(centerX, 240, '点数計算練習（翻・符→点数）', {
-            fontSize: '20px',
-            color: activeColor
-        }).setOrigin(0.5, 0.5);
-        scorePractice.setInteractive({ useHandCursor: true });
-        scorePractice.on('pointerover', () => scorePractice.setColor(hoverColor));
-        scorePractice.on('pointerout', () => scorePractice.setColor(activeColor));
-        scorePractice.on('pointerdown', () => {
-            this.scene.start('ScorePracticeScene');
-        });
+        createTextButton(
+            this,
+            centerX,
+            240,
+            '点数計算練習（翻・符→点数）',
+            THEME,
+            () => this.scene.start('ScorePracticeScene'),
+            { fontSize: '20px', minWidth: 360 }
+        );
 
         this.add.text(centerX, 300, '役判定（保留）', {
             fontSize: '20px',
-            color: disabledColor
+            color: disabledColor,
+            padding: { top: 2, bottom: 2 }
         }).setOrigin(0.5, 0.5);
     }
 }
